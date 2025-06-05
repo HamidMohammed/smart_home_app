@@ -5,46 +5,56 @@ class EnvironmentData {
   final double temperature;
   final double humidity;
   final bool gasLeak;
+  final bool flameDetected; // Added flame detection
 
   const EnvironmentData({
     required this.temperature,
     required this.humidity,
     required this.gasLeak,
+    required this.flameDetected,
   });
 
   factory EnvironmentData.empty() => const EnvironmentData(
         temperature: 0,
         humidity: 0,
         gasLeak: false,
+        flameDetected: false,
       );
 }
 
 class EnvironmentService {
   Stream<EnvironmentData> get stream async* {
-    // Replace with your actual data stream
     while (true) {
       await Future.delayed(const Duration(seconds: 2));
+      final random = Random();
       yield EnvironmentData(
-        temperature: 10 + Random().nextDouble() * 20, // 20-30°C
-        humidity: 10 + Random().nextDouble() * 80, // 30-80%
-        gasLeak: Random().nextDouble() > 0.9, // 10% chance
+        temperature: 20 + random.nextDouble() * 10, // 20-30°C
+        humidity: 30 + random.nextDouble() * 50, // 30-80%
+        gasLeak: random.nextDouble() > 0.7, // 10% chance
+        flameDetected: random.nextDouble() > 0.7, // 10% chance
       );
     }
   }
 }
 
-class GasAlertBanner extends StatelessWidget {
-  const GasAlertBanner({super.key});
+class HazardAlertBanner extends StatelessWidget {
+  final String alertType; // 'gas' or 'flame'
+
+  const HazardAlertBanner({
+    super.key,
+    required this.alertType,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(vertical: 22),
       decoration: BoxDecoration(
-        color: Colors.red[900],
+        color: alertType == 'gas' ? Colors.red[900] : Colors.orange[800],
         boxShadow: [
           BoxShadow(
-            color: Colors.red.withOpacity(0.5),
+            color: (alertType == 'gas' ? Colors.red : Colors.orange)
+                .withOpacity(0.5),
             blurRadius: 10,
             spreadRadius: 2,
           ),
@@ -53,11 +63,15 @@ class GasAlertBanner extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.warning, color: Colors.white, size: 28),
+          Icon(
+            alertType == 'gas' ? Icons.warning : Icons.fireplace,
+            color: Colors.white,
+            size: 28,
+          ),
           const SizedBox(width: 10),
           Text(
-            'GAS LEAK DETECTED!',
-            style: TextStyle(
+            alertType == 'gas' ? 'GAS LEAK DETECTED!' : 'FLAME DETECTED!',
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -73,15 +87,28 @@ class GasAlertBanner extends StatelessWidget {
 class SensorStatusBar extends StatelessWidget {
   final double temperature;
   final double humidity;
+  final bool gasLeak;
+  final bool flameDetected;
 
   const SensorStatusBar({
     super.key,
     required this.temperature,
     required this.humidity,
+    required this.gasLeak,
+    required this.flameDetected,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Show hazard alert if detected
+    if (gasLeak) {
+      return const HazardAlertBanner(alertType: 'gas');
+    }
+    if (flameDetected) {
+      return const HazardAlertBanner(alertType: 'flame');
+    }
+
+    // Normal status display
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40),
       child: Container(
@@ -159,12 +186,14 @@ class EnvironmentSensorTile extends StatelessWidget {
   final double temperature;
   final double humidity;
   final bool gasLeak;
+  final bool flameDetected;
 
   const EnvironmentSensorTile({
     super.key,
     required this.temperature,
     required this.humidity,
     required this.gasLeak,
+    required this.flameDetected,
   });
 
   @override
@@ -212,6 +241,11 @@ class EnvironmentSensorTile extends StatelessWidget {
                 icon: gasLeak ? Icons.warning : Icons.check_circle,
                 value: gasLeak ? 'GAS LEAK!' : 'Air Safe',
                 color: gasLeak ? Colors.red : Colors.green,
+              ),
+              _buildSensorRow(
+                icon: flameDetected ? Icons.fireplace : Icons.check_circle,
+                value: flameDetected ? 'FLAME DETECTED!' : 'No Flame',
+                color: flameDetected ? Colors.orange : Colors.green,
               ),
             ],
           ),

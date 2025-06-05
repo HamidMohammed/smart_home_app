@@ -4,8 +4,8 @@ import 'package:simple_ui/util/smart_fan_box.dart';
 import 'package:simple_ui/util/smart_device_box.dart';
 import 'package:simple_ui/util/smart_light_box.dart';
 import 'package:simple_ui/util/environment_components.dart';
-import 'package:simple_ui/components/app_drawer.dart'; // New drawer component
-import 'package:simple_ui/pages/login_page.dart'; // For logout functionality
+import 'package:simple_ui/components/app_drawer.dart';
+import 'package:simple_ui/pages/login_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -15,11 +15,14 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // padding constants
   final double horizontalPadding = 30;
   final double verticalPadding = 25;
 
-  // list of smart devices
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  List<String> rooms = ["Living Room", "Bedroom", "Kitchen", "Garage"];
+  int selectedRoomIndex = 0;
+
   List mySmartDevices = [
     ["Smart Light", "lib/icons/light-bulb.png", true],
     ["Smart Window", "lib/icons/windows.png", false],
@@ -27,17 +30,12 @@ class _HomePageState extends State<HomePage> {
     ["Smart Fan", "lib/icons/fan.png", false],
   ];
 
-  // Global key for scaffold to open drawer programmatically
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
-  // power button switched
   void powerSwitchChanged(bool value, int index) {
     setState(() {
       mySmartDevices[index][2] = value;
     });
   }
 
-  // Toggle all devices
   void toggleAllDevices(bool value) {
     setState(() {
       for (var device in mySmartDevices) {
@@ -63,7 +61,7 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // app bar with menu button
+            // Top bar
             Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: horizontalPadding,
@@ -72,7 +70,6 @@ class _HomePageState extends State<HomePage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Menu button to open drawer
                   IconButton(
                     icon: Image.asset(
                       'lib/icons/menu.png',
@@ -81,13 +78,8 @@ class _HomePageState extends State<HomePage> {
                     ),
                     onPressed: () => _scaffoldKey.currentState?.openDrawer(),
                   ),
-                  // User profile with quick actions menu
                   PopupMenuButton<String>(
-                    icon: Icon(
-                      Icons.person,
-                      size: 35,
-                      color: Colors.grey[800],
-                    ),
+                    icon: Icon(Icons.person, size: 35, color: Colors.grey[800]),
                     onSelected: (value) {
                       if (value == 'logout') {
                         Navigator.pushReplacement(
@@ -97,68 +89,70 @@ class _HomePageState extends State<HomePage> {
                         );
                       }
                     },
-                    itemBuilder: (BuildContext context) {
-                      return [
-                        const PopupMenuItem(
-                          value: 'profile',
-                          child: Text('Edit Profile'),
-                        ),
-                        const PopupMenuItem(
-                          value: 'settings',
-                          child: Text('Settings'),
-                        ),
-                        const PopupMenuDivider(),
-                        const PopupMenuItem(
-                          value: 'logout',
-                          child: Text('Log Out'),
-                        ),
-                      ];
-                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                          value: 'profile', child: Text('Edit Profile')),
+                      const PopupMenuItem(
+                          value: 'settings', child: Text('Settings')),
+                      const PopupMenuDivider(),
+                      const PopupMenuItem(
+                          value: 'logout', child: Text('Log Out')),
+                    ],
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 0),
 
-            // welcome home section
+            // Welcome section
             Padding(
               padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    "Welcome Home,",
-                    style: TextStyle(fontSize: 20, color: Colors.grey.shade800),
-                  ),
-                  Text(
-                    'Mohamed Ragb',
-                    style: GoogleFonts.bebasNeue(fontSize: 62),
-                  ),
+                  Text("Welcome Home,",
+                      style:
+                          TextStyle(fontSize: 20, color: Colors.grey.shade800)),
+                  Text('Mohamed Ragb',
+                      style: GoogleFonts.bebasNeue(fontSize: 62)),
                 ],
               ),
             ),
 
             const SizedBox(height: 20),
 
-            // Environment Status Bar
+            // Hazard alert or environment display
             StreamBuilder<EnvironmentData>(
               stream: EnvironmentService().stream,
               builder: (context, snapshot) {
                 final data = snapshot.data ?? EnvironmentData.empty();
-                if (data.gasLeak) {
-                  return const GasAlertBanner();
+
+                // Display alert banner if either hazard occurs
+                if (data.gasLeak || data.flameDetected) {
+                  return HazardAlertBanner(
+                    alertType: data.gasLeak && data.flameDetected
+                        ? 'both'
+                        : data.gasLeak
+                            ? 'gas'
+                            : 'flame',
+                  );
                 }
+
                 return SensorStatusBar(
                   temperature: data.temperature,
                   humidity: data.humidity,
+                  gasLeak: data.gasLeak,
+                  flameDetected: data.flameDetected,
                 );
               },
             ),
 
+            const SizedBox(height: 10),
+
             const SizedBox(height: 15),
 
-            // Quick actions row
+            // Quick actions
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40.0),
               child: Row(
@@ -189,14 +183,12 @@ class _HomePageState extends State<HomePage> {
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 40.0),
               child: Divider(
-                thickness: 1,
-                color: Color.fromARGB(255, 204, 204, 204),
-              ),
+                  thickness: 1, color: Color.fromARGB(255, 204, 204, 204)),
             ),
 
-            const SizedBox(height: 15),
+            const SizedBox(height: 10),
 
-            // smart devices grid header
+            // Smart devices header
             Padding(
               padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
               child: Row(
@@ -212,17 +204,89 @@ class _HomePageState extends State<HomePage> {
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.refresh),
+                    onPressed: () => setState(() {}),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add),
                     onPressed: () {
-                      // Refresh device states
-                      setState(() {});
+                      showModalBottomSheet(
+                        context: context,
+                        builder: (context) => Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ListTile(
+                              leading: const Icon(Icons.add),
+                              title: const Text('Add New Device'),
+                              onTap: () => Navigator.pop(context),
+                            ),
+                            ListTile(
+                              leading: const Icon(Icons.settings),
+                              title: const Text('Quick Settings'),
+                              onTap: () => Navigator.pop(context),
+                            ),
+                          ],
+                        ),
+                      );
                     },
                   ),
                 ],
               ),
             ),
+
             const SizedBox(height: 10),
 
-            // devices grid
+            // Horizontal room selection bar (simplified style)
+            Container(
+              height: 40,
+              margin: const EdgeInsets.symmetric(horizontal: 25),
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: rooms.length,
+                itemBuilder: (context, index) {
+                  final isSelected = selectedRoomIndex == index;
+                  return GestureDetector(
+                    onTap: () => setState(() => selectedRoomIndex = index),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      margin: const EdgeInsets.only(right: 10),
+                      decoration: isSelected
+                          ? BoxDecoration(
+                              color: Colors.blueGrey.shade700,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            )
+                          : null,
+                      child: Text(
+                        rooms[index],
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w500,
+                          letterSpacing: 0.3,
+                          color: isSelected ? Colors.white : Colors.grey[700],
+                          fontFamily: 'Roboto',
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 40.0),
+              child: Divider(
+                  thickness: 1, color: Color.fromARGB(255, 204, 204, 204)),
+            ),
+
+            // Smart devices grid
             Expanded(
               child: GridView.builder(
                 itemCount: mySmartDevices.length,
@@ -259,37 +323,41 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
-      // Floating action button for quick actions
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Show quick actions menu
-          showModalBottomSheet(
-            context: context,
-            builder: (context) => Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.add),
-                  title: const Text('Add New Device'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    // Add device logic
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.settings),
-                  title: const Text('Quick Settings'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    // Settings logic
-                  },
-                ),
-              ],
-            ),
-          );
-        },
-        child: const Icon(Icons.menu),
-      ),
+
+      // // Floating action button for quick actions (bottom)
+      // floatingActionButton: FloatingActionButton(
+      //   onPressed: () {
+      //     showModalBottomSheet(
+      //       context: context,
+      //       builder: (context) => Column(
+      //         mainAxisSize: MainAxisSize.min,
+      //         children: [
+      //           ListTile(
+      //             leading: const Icon(Icons.add),
+      //             title: const Text('Add New Device'),
+      //             onTap: () {
+      //               Navigator.pop(context);
+      //               // Add device logic
+      //             },
+      //           ),
+      //           ListTile(
+      //             leading: const Icon(Icons.settings),
+      //             title: const Text('Quick Settings'),
+      //             onTap: () {
+      //               Navigator.pop(context);
+      //               // Settings logic
+      //             },
+      //           ),
+      //         ],
+      //       ),
+      //     );
+      //   },
+      //   backgroundColor: Colors.blueGrey,
+      //   elevation: 4,
+      //   shape: const CircleBorder(),
+      //   child: const Icon(Icons.add),
+      //   heroTag: 'mainFab',
+      // ),
     );
   }
 }

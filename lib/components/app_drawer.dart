@@ -39,6 +39,9 @@ class AppDrawer extends StatelessWidget {
             title: 'Usage History',
             onTap: () => _navigateTo(context, '/history'),
           ),
+          SizedBox(
+            height: 280,
+          ),
           const Divider(color: Colors.grey),
           _buildDrawerItem(
             context,
