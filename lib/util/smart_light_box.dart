@@ -7,6 +7,7 @@ class SmartLightBox extends StatefulWidget {
   final String iconPath;
   final bool powerOn;
   final Function(bool)? onChanged;
+  final bool enabled;
 
   const SmartLightBox({
     super.key,
@@ -14,6 +15,7 @@ class SmartLightBox extends StatefulWidget {
     required this.iconPath,
     required this.powerOn,
     required this.onChanged,
+    this.enabled = true,
   });
 
   @override
@@ -26,6 +28,8 @@ class _SmartLightBoxState extends State<SmartLightBox> {
   bool _showSlider = false;
 
   void _onTap() {
+    if (!widget.enabled) return;
+
     // Simple tap - toggle on/off and show intensity briefly
     final newState = !widget.powerOn;
     widget.onChanged?.call(newState);
@@ -56,6 +60,8 @@ class _SmartLightBoxState extends State<SmartLightBox> {
   }
 
   void _onLongPress() {
+    if (!widget.enabled) return;
+
     // Long press - show slider for intensity control (only if light is on)
     if (widget.powerOn) {
       setState(() {
@@ -132,11 +138,13 @@ class _SmartLightBoxState extends State<SmartLightBox> {
                               value: _lightIntensity,
                               min: 0.1, // Minimum 10%
                               max: 1.0,
-                              onChanged: (value) {
-                                setState(() {
-                                  _lightIntensity = value;
-                                });
-                              },
+                              onChanged: widget.enabled
+                                  ? (value) {
+                                      setState(() {
+                                        _lightIntensity = value;
+                                      });
+                                    }
+                                  : null,
                               activeColor: Colors.amber,
                               inactiveColor: Colors.grey[600],
                             ),
@@ -227,18 +235,24 @@ class _SmartLightBoxState extends State<SmartLightBox> {
                               ),
                               Transform.rotate(
                                 angle: pi / 2,
-                                child: CupertinoSwitch(
-                                  value: widget.powerOn,
-                                  onChanged: (value) {
-                                    widget.onChanged?.call(value);
-                                    setState(() {
-                                      if (!value) {
-                                        _lightIntensity = 0;
-                                      } else if (_lightIntensity == 0) {
-                                        _lightIntensity = 0.7; // Default to 70%
-                                      }
-                                    });
-                                  },
+                                child: Opacity(
+                                  opacity: widget.enabled ? 1.0 : 0.5,
+                                  child: CupertinoSwitch(
+                                    value: widget.powerOn,
+                                    onChanged: widget.enabled
+                                        ? (value) {
+                                            widget.onChanged?.call(value);
+                                            setState(() {
+                                              if (!value) {
+                                                _lightIntensity = 0;
+                                              } else if (_lightIntensity == 0) {
+                                                _lightIntensity =
+                                                    0.7; // Default to 70%
+                                              }
+                                            });
+                                          }
+                                        : null,
+                                  ),
                                 ),
                               ),
                             ],

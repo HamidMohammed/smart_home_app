@@ -7,6 +7,7 @@ class SmartDeviceBox extends StatefulWidget {
   final String iconPath;
   final bool powerOn;
   final void Function(bool)? onChanged;
+  final bool enabled;
 
   const SmartDeviceBox({
     super.key,
@@ -14,6 +15,7 @@ class SmartDeviceBox extends StatefulWidget {
     required this.iconPath,
     required this.powerOn,
     required this.onChanged,
+    this.enabled = true,
   });
 
   @override
@@ -24,6 +26,8 @@ class _SmartDeviceBoxState extends State<SmartDeviceBox> {
   bool _showStatus = false;
 
   void _toggleDevice() {
+    if (!widget.enabled) return;
+
     final newState = !widget.powerOn;
     widget.onChanged?.call(newState);
     setState(() {
@@ -123,22 +127,27 @@ class _SmartDeviceBoxState extends State<SmartDeviceBox> {
                             ),
                             Transform.rotate(
                               angle: pi / 2,
-                              child: CupertinoSwitch(
-                                value: widget.powerOn,
-                                onChanged: (value) {
-                                  widget.onChanged?.call(value);
-                                  setState(() {
-                                    _showStatus = true;
-                                  });
-                                  Future.delayed(const Duration(seconds: 1),
-                                      () {
-                                    if (mounted) {
-                                      setState(() {
-                                        _showStatus = false;
-                                      });
-                                    }
-                                  });
-                                },
+                              child: Opacity(
+                                opacity: widget.enabled ? 1.0 : 0.5,
+                                child: CupertinoSwitch(
+                                  value: widget.powerOn,
+                                  onChanged: widget.enabled
+                                      ? (value) {
+                                          widget.onChanged?.call(value);
+                                          setState(() {
+                                            _showStatus = true;
+                                          });
+                                          Future.delayed(
+                                              const Duration(seconds: 1), () {
+                                            if (mounted) {
+                                              setState(() {
+                                                _showStatus = false;
+                                              });
+                                            }
+                                          });
+                                        }
+                                      : null,
+                                ),
                               ),
                             ),
                           ],

@@ -7,6 +7,7 @@ class SmartFanBox extends StatefulWidget {
   final String iconPath;
   final bool powerOn;
   final Function(bool)? onChanged;
+  final bool enabled;
 
   const SmartFanBox({
     super.key,
@@ -14,6 +15,7 @@ class SmartFanBox extends StatefulWidget {
     required this.iconPath,
     required this.powerOn,
     required this.onChanged,
+    this.enabled = true,
   });
 
   @override
@@ -25,6 +27,8 @@ class _SmartFanBoxState extends State<SmartFanBox> {
   bool _showSpeedIndicator = false;
 
   void _cycleFanSpeed() {
+    if (!widget.enabled) return;
+
     setState(() {
       _fanSpeed = (_fanSpeed + 1) % 4; // Cycles 0→1→2→3→0
       _showSpeedIndicator = true;
@@ -136,9 +140,14 @@ class _SmartFanBoxState extends State<SmartFanBox> {
                               ),
                               Transform.rotate(
                                 angle: pi / 2,
-                                child: CupertinoSwitch(
-                                  value: widget.powerOn,
-                                  onChanged: widget.onChanged,
+                                child: Opacity(
+                                  opacity: widget.enabled ? 1.0 : 0.5,
+                                  child: CupertinoSwitch(
+                                    value: widget.powerOn,
+                                    onChanged: widget.enabled
+                                        ? widget.onChanged
+                                        : null,
+                                  ),
                                 ),
                               ),
                             ],

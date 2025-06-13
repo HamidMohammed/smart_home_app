@@ -7,6 +7,13 @@ import 'package:simple_ui/util/environment_components.dart';
 import 'package:simple_ui/components/app_drawer.dart';
 import 'package:simple_ui/pages/login_page.dart';
 
+// Add this enum at the top of the file
+enum ControlMode {
+  bciOnly,
+  mobileOnly,
+  both,
+}
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -17,8 +24,10 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final double horizontalPadding = 30;
   final double verticalPadding = 25;
-
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  // Control mode state
+  ControlMode controlMode = ControlMode.mobileOnly;
 
   List<String> rooms = ["Living Room", "Bedroom", "Kitchen", "Garage"];
   int selectedRoomIndex = 0;
@@ -31,17 +40,97 @@ class _HomePageState extends State<HomePage> {
   ];
 
   void powerSwitchChanged(bool value, int index) {
+    // Check control mode before allowing changes
+    if (controlMode == ControlMode.bciOnly) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Device control currently set to BCI only'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       mySmartDevices[index][2] = value;
     });
   }
 
   void toggleAllDevices(bool value) {
+    // Check control mode before allowing changes
+    if (controlMode == ControlMode.bciOnly) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Device control currently set to BCI only'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       for (var device in mySmartDevices) {
         device[2] = value;
       }
     });
+  }
+
+  // Method to update control mode and handle enabling/disabling controls
+  void _updateControlMode(ControlMode newMode) {
+    setState(() {
+      controlMode = newMode;
+    });
+
+    // Here you would integrate with your actual BCI system
+    // For now, we'll just print and show snackbars
+    switch (newMode) {
+      case ControlMode.bciOnly:
+        // Disable mobile controls, enable BCI
+        print('BCI control enabled, mobile controls disabled');
+        break;
+      case ControlMode.mobileOnly:
+        // Disable BCI, enable mobile controls
+        print('Mobile controls enabled, BCI control disabled');
+        break;
+      case ControlMode.both:
+        // Enable both
+        print('Both BCI and mobile controls enabled');
+        break;
+    }
+  }
+
+  // Method to cycle through control modes
+  void _cycleControlMode() {
+    ControlMode newMode;
+    String message;
+    Color? snackbarColor;
+
+    switch (controlMode) {
+      case ControlMode.mobileOnly:
+        newMode = ControlMode.bciOnly;
+        message = 'Control mode changed to BCI only (mobile controls disabled)';
+        break;
+      case ControlMode.bciOnly:
+        newMode = ControlMode.both;
+        message = 'Control mode changed to BOTH (may cause interference)';
+        snackbarColor = Colors.orange;
+        break;
+      case ControlMode.both:
+        newMode = ControlMode.mobileOnly;
+        message = 'Control mode changed to Mobile only (BCI controls disabled)';
+        break;
+    }
+
+    _updateControlMode(newMode);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: snackbarColor,
+      ),
+    );
   }
 
   @override
@@ -202,9 +291,15 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   const Spacer(),
+                  // Control mode toggle button
                   IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: () => setState(() {}),
+                    icon: Image.asset(
+                      'lib/icons/change.png',
+                      height: 18,
+                    ),
+                    onPressed: _cycleControlMode,
+                    tooltip:
+                        'Change control mode (Current: ${controlMode.toString().split('.').last})',
                   ),
                   IconButton(
                     icon: const Icon(Icons.add),
@@ -235,7 +330,7 @@ class _HomePageState extends State<HomePage> {
 
             const SizedBox(height: 10),
 
-            // Horizontal room selection bar (simplified style)
+            // Horizontal room selection bar
             Container(
               height: 40,
               margin: const EdgeInsets.symmetric(horizontal: 25),
@@ -245,7 +340,19 @@ class _HomePageState extends State<HomePage> {
                 itemBuilder: (context, index) {
                   final isSelected = selectedRoomIndex == index;
                   return GestureDetector(
-                    onTap: () => setState(() => selectedRoomIndex = index),
+                    onTap: () {
+                      if (controlMode == ControlMode.bciOnly) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                'Room selection currently set to BCI only'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                        return;
+                      }
+                      setState(() => selectedRoomIndex = index);
+                    },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 8),
@@ -302,6 +409,8 @@ class _HomePageState extends State<HomePage> {
                       iconPath: mySmartDevices[index][1],
                       powerOn: mySmartDevices[index][2],
                       onChanged: (value) => powerSwitchChanged(value, index),
+                      // Disable interaction in BCI-only mode
+                      enabled: controlMode != ControlMode.bciOnly,
                     );
                   } else if (mySmartDevices[index][0] == "Smart Fan") {
                     return SmartFanBox(
@@ -309,6 +418,8 @@ class _HomePageState extends State<HomePage> {
                       iconPath: mySmartDevices[index][1],
                       powerOn: mySmartDevices[index][2],
                       onChanged: (value) => powerSwitchChanged(value, index),
+                      // Disable interaction in BCI-only mode
+                      enabled: controlMode != ControlMode.bciOnly,
                     );
                   }
                   return SmartDeviceBox(
@@ -316,6 +427,8 @@ class _HomePageState extends State<HomePage> {
                     iconPath: mySmartDevices[index][1],
                     powerOn: mySmartDevices[index][2],
                     onChanged: (value) => powerSwitchChanged(value, index),
+                    // Disable interaction in BCI-only mode
+                    enabled: controlMode != ControlMode.bciOnly,
                   );
                 },
               ),
@@ -323,41 +436,6 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
-
-      // // Floating action button for quick actions (bottom)
-      // floatingActionButton: FloatingActionButton(
-      //   onPressed: () {
-      //     showModalBottomSheet(
-      //       context: context,
-      //       builder: (context) => Column(
-      //         mainAxisSize: MainAxisSize.min,
-      //         children: [
-      //           ListTile(
-      //             leading: const Icon(Icons.add),
-      //             title: const Text('Add New Device'),
-      //             onTap: () {
-      //               Navigator.pop(context);
-      //               // Add device logic
-      //             },
-      //           ),
-      //           ListTile(
-      //             leading: const Icon(Icons.settings),
-      //             title: const Text('Quick Settings'),
-      //             onTap: () {
-      //               Navigator.pop(context);
-      //               // Settings logic
-      //             },
-      //           ),
-      //         ],
-      //       ),
-      //     );
-      //   },
-      //   backgroundColor: Colors.blueGrey,
-      //   elevation: 4,
-      //   shape: const CircleBorder(),
-      //   child: const Icon(Icons.add),
-      //   heroTag: 'mainFab',
-      // ),
     );
   }
 }
